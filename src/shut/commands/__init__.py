@@ -85,3 +85,4 @@ from . import conda_forge
 from . import license
 from . import mono
 from . import pkg
+from .commons import install

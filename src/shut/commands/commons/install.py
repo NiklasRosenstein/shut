@@ -21,25 +21,52 @@
 
 import os
 import shlex
-import subprocess as sp
-import sys
-from typing import List, Optional, Set, Tuple
+import typing as t
 
 import click
-from nr.stream import concat
-from termcolor import colored
 
 from shut.commands import project
+from shut.commands.mono import mono
 from shut.commands.pkg import pkg
-from shut.lifecycle import PackageLifecycle, InstallOptions
+from shut.lifecycle import MonorepoLifecycle, PackageLifecycle, InstallOptions
 from shut.model.package import PackageModel
-from shut.model.requirements import Requirement, RequirementsList, VendoredRequirement
+from shut.model.monorepo import MonorepoModel
 
 
-def split_extras(extras: str) -> Set[str]:
+def split_extras(extras: str) -> t.Set[str]:
   result = set(map(str.strip, extras.split(',')))
   result.discard('')
   return result
+
+
+@mono.command()
+@click.option('--develop/--no-develop', default=True,
+  help='Install in develop mode (default: true)')
+@click.option('--extra', type=split_extras, help='Specify one or more extras to install.')
+@click.option('-U', '--upgrade', is_flag=True, help='Upgrade all packages (forwarded to pip install).')
+@click.option('-q', '--quiet', is_flag=True, help='Quiet install')
+@click.option('--pip', help='Override the command to run Pip. Defaults to "python -m pip" or the PIP variable.')
+@click.option('--pip-args', help='Additional arguments to pass to Pip.')
+@click.option('--dry', is_flag=True, help='Print the Pip command to stdout instead of running it.')
+def install(develop, extra, upgrade, quiet, pip, pip_args, dry):
+  """
+  Install all packages in the monorepo using`python -m pip`.
+
+  The command used to invoke Pip can be overwritten using the `PIP` environment variable.
+  """
+
+  monorepo = project.load_or_exit(expect=MonorepoModel)
+  options = InstallOptions(
+    quiet=quiet,
+    develop=develop,
+    upgrade=upgrade,
+    extras=extra,
+    pip=shlex.split(pip) if pip else None,
+    pip_extra_args=shlex.split(pip_args) if pip_args else None,
+    allow_global=False,
+    create_environment=False,
+    dry=dry)
+  MonorepoLifecycle(monorepo).install(options)
 
 
 @pkg.command()
