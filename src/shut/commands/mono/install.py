@@ -2,10 +2,10 @@
 import click
 import networkx as nx
 
-from shut.commands.pkg.install import collect_requirement_args, run_install, split_extras
+from shut.commands.mono import mono, project
+from shut.commands.pkg.install import split_extras
+from shut.lifecycle import MonorepoLifecycle, InstallOptions
 from shut.model.monorepo import MonorepoModel
-from shut.model.requirements import RequirementsList
-from . import mono, project
 
 
 @mono.command()
@@ -25,16 +25,14 @@ def install(develop, extra, upgrade, quiet, pip, pip_args, dry):
   """
 
   monorepo = project.load_or_exit(expect=MonorepoModel)
-  graph = monorepo.get_inter_dependencies_graph()
-  package_map = {p.name: p for p in project.packages}
-
-  args = []
-  for package_name in nx.algorithms.dag.topological_sort(graph):
-    package = package_map[package_name]
-    args += collect_requirement_args(package, develop, False, extra)
-    args += package.install.get_pip_args()
-
-  if pip_args:
-    args += shlex.split(pip_args)
-
-  run_install(pip, args, develop, upgrade, quiet, dry)
+  options = InstallOptions(
+    quiet=quiet,
+    develop=develop,
+    upgrade=upgrade,
+    extras=extra,
+    pip=shlex.split(pip) if pip else None,
+    pip_extra_args=shlex.split(pip_args) if pip_args else None,
+    allow_global=False,
+    create_environment=False,
+    dry=dry)
+  MonorepoLifecycle(monorepo).install(options)

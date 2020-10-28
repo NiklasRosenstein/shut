@@ -29,64 +29,11 @@ import click
 from nr.stream import concat
 from termcolor import colored
 
+from shut.commands import project
+from shut.commands.pkg import pkg
+from shut.lifecycle import PackageLifecycle, InstallOptions
 from shut.model.package import PackageModel
 from shut.model.requirements import Requirement, RequirementsList, VendoredRequirement
-from . import pkg
-from .. import project
-
-
-def collect_requirement_args(
-  package: bool,
-  develop: bool,
-  inter_deps: bool,
-  extra: Optional[Set[str]],
-) -> List[str]:
-  reqs = RequirementsList()
-
-  # Pip does not understand "test" as an extra and does not have an option to
-  # install test requirements.
-  if extra and 'test' in extra:
-    reqs += package.test_requirements
-
-  reqs.append(VendoredRequirement(VendoredRequirement.Type.Path, package.get_directory()))
-  reqs += package.requirements.vendored_reqs()
-
-  if project.monorepo and inter_deps:
-    # TODO(NiklasRosenstein): get_inter_dependencies_for() does not currently differentiate
-    #   between normal, test and extra requirements.
-    project_packages = {p.name: p for p in project.packages}
-    for ref in project.monorepo.get_inter_dependencies_for(package):
-      dep = project_packages[ref.package_name]
-      if not ref.version_selector.matches(dep.version):
-        print('note: skipping inter-dependency on package "{}" because the version selector '
-              '{} does not match the present version {}'
-              .format(dep.name, ref.version_selector, dep.version), file=sys.stderr)
-      else:
-        reqs.insert(0, VendoredRequirement(VendoredRequirement.Type.Path, dep.get_directory()))
-
-  return reqs.get_pip_args(package.get_directory(), develop)
-
-
-def run_install(
-  pip: Optional[str],
-  args: List[str],
-  develop: bool,
-  upgrade: bool,
-  quiet: bool,
-  dry: bool,
-) -> None:
-
-  pip_bin = shlex.split(os.getenv('PIP', pip or 'python -m pip'))
-  command = pip_bin + ['install'] + args
-  if upgrade:
-    command.append('--upgrade')
-  if quiet:
-    command.append('--quiet')
-
-  if dry:
-    print(' '.join(map(shlex.quote, command)))
-  else:
-    sys.exit(sp.call(command))
 
 
 def split_extras(extras: str) -> Set[str]:
@@ -119,11 +66,14 @@ def install(develop, inter_deps, extra, upgrade, quiet, pip, pip_args, dry, pipx
     pip = 'pipx'
 
   package = project.load_or_exit(expect=PackageModel)
-  args = collect_requirement_args(package, develop, inter_deps, extra)
-  if pipx:
-    args += ['--pip-args', ' '.join(map(shlex.quote, package.install.get_pip_args()))]
-  else:
-    args += package.install.get_pip_args()
-  if pip_args:
-    args += shlex.split(pip_args)
-  run_install(pip, args, develop, upgrade, quiet, dry)
+  options = InstallOptions(
+    quiet=quiet,
+    develop=develop,
+    upgrade=upgrade,
+    extras=extra,
+    pip=shlex.split(pip) if pip else None,
+    pip_extra_args=shlex.split(pip_args) if pip_args else None,
+    allow_global=False,
+    create_environment=False,
+    dry=dry)
+  PackageLifecycle(package).install(options)
