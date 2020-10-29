@@ -39,8 +39,6 @@ def mono(ctx, run_checks):
     checks.check_monorepo(monorepo, skip_positive_checks=True, print_stats=False, use_stderr=True)
 
 
-from . import bump
-from . import checks
 from . import new
 from . import publish
 from . import status

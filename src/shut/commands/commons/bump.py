@@ -23,8 +23,8 @@ import abc
 import logging
 import os
 import sys
+import typing as t
 from collections import Counter
-from typing import Iterable, Generic, Optional, T, Type
 
 import click
 import nr.fs
@@ -36,18 +36,26 @@ from termcolor import colored
 from shut.changelog.manager import ChangelogManager
 from shut.changelog.v3 import Changelog
 from shut.commands import project
-from shut.model import AbstractProjectModel, Project
+from shut.commands.commons.checks import check_monorepo
+from shut.commands.commons.checks import check_package
+from shut.commands.mono import mono
+from shut.commands.mono.update import update_monorepo
+from shut.commands.pkg import pkg
+from shut.commands.pkg.update import update_package
+from shut.model import AbstractProjectModel, MonorepoModel, PackageModel, Project
 from shut.model.version import bump_version, parse_version, Version
-from shut.renderers import get_version_refs, VersionRef
+from shut.renderers import get_files, get_version_refs, VersionRef
 from shut.utils.io.virtual import VirtualFiles
 from shut.utils.text import substitute_ranges
 
+
 logger = logging.getLogger(__name__)
+T = t.TypeVar('T')
 
 
 @datamodel
 class Args:
-  version: Optional[Version]
+  version: t.Optional[Version]
   major: bool
   minor: bool
   patch: bool
@@ -63,7 +71,7 @@ class Args:
   allow_lower: bool = False
 
 
-class VersionBumpData(Generic[T], metaclass=abc.ABCMeta):
+class VersionBumpData(t.Generic[T], metaclass=abc.ABCMeta):
 
   def __init__(self, args: Args, project: Project, obj: T) -> None:
     self.args = args
@@ -77,10 +85,10 @@ class VersionBumpData(Generic[T], metaclass=abc.ABCMeta):
   def get_snapshot_version(self) -> Version:
     pass
 
-  def get_version_refs(self) -> Iterable[VersionRef]:
+  def get_version_refs(self) -> t.Iterable[VersionRef]:
     yield from get_version_refs(self.obj)
 
-  def bump_to_version(self, target_version: Version) -> Iterable[str]:
+  def bump_to_version(self, target_version: Version) -> t.Iterable[str]:
     """
     Called to bump to the specified *target_version*. The default implementation uses the
     version refs provided by #get_version_refs() to bump.
@@ -137,13 +145,13 @@ class VersionBumpData(Generic[T], metaclass=abc.ABCMeta):
     must be returned.
     """
 
-  def get_changelog_managers(self) -> Iterable[ChangelogManager]:
+  def get_changelog_managers(self) -> t.Iterable[ChangelogManager]:
     yield ChangelogManager(self.obj.get_changelog_directory())
 
 
 def make_bump_command(
-  data_class: Type[VersionBumpData[AbstractProjectModel]],
-  model_type: Type[AbstractProjectModel],
+  data_class: t.Type[VersionBumpData[AbstractProjectModel]],
+  model_type: t.Type[AbstractProjectModel],
 ) -> click.Command:
 
   @click.argument('version', type=parse_version, required=False)
@@ -274,3 +282,121 @@ def do_bump(args: Args, data: VersionBumpData[AbstractProjectModel]) -> None:
 
     if not args.dry and args.push:
       git.push('origin', git.get_current_branch_name(), tag_name, force=args.force)
+
+
+class MonorepoBumpdata(VersionBumpData[MonorepoModel]):
+
+  def update(self, new_version: Version) -> VirtualFiles:
+    # We have to re-load the monorepo and package definitions from the files since
+    # they have been updated by #bump_to_version(). This is a workaround to updating
+    # the version selectors of inter-dependencies in memory.
+    self.project.reload()
+
+    vfiles = update_monorepo(self.obj, dry=self.args.dry, indent=1)
+    if self.obj.release.single_version:
+      for package in self.project.packages:
+        vfiles.update(
+          PackageBumpData(self.args, self.project, package).update(new_version),
+          os.path.relpath(package.get_directory(), self.obj.get_directory()))
+
+    return vfiles
+
+  def get_version_refs(self) -> t.Iterable[VersionRef]:
+    yield from super().get_version_refs()
+    if self.obj.release.single_version:
+      for package in self.project.packages:
+        yield from PackageBumpData(self.args, self.project, package).get_version_refs()
+
+  def bump_to_version(self, target_version: Version) -> t.Iterable[str]:
+    changed_files = list(super().bump_to_version(target_version))
+
+    if not self.obj.release.single_version:
+      return changed_files
+
+    inter_deps = list(self.obj.get_inter_dependencies())
+    if not inter_deps:
+      return changed_files
+
+    print()
+    print(f'bumping {len(inter_deps)} mono repository inter-dependency(-ies)')
+    for filename, refs in Stream.groupby(inter_deps, lambda d: d.filename, collect=list):
+      print(f'  {colored(nr.fs.rel(filename), "cyan")}:')
+
+      with open(filename) as fp:
+        content = fp.read()
+
+      for ref in refs:
+        value = content[ref.version_start:ref.version_end]
+        print(f'    {ref.package_name} {value} → ^{target_version}')
+
+      content = substitute_ranges(
+        content,
+        ((ref.version_start, ref.version_end, f'^{target_version}') for ref in refs),
+      )
+      if not self.args.dry:
+        with open(filename, 'w') as fp:
+          fp.write(content)
+
+      changed_files.append(filename)
+
+    if self.args.tag and inter_deps and self.args.skip_update:
+      logger.warning('bump requires an update in order to automatically tag')
+
+    return changed_files
+
+  def get_snapshot_version(self) -> Version:
+    return get_commit_distance_version(
+      self.obj.get_directory(),
+      self.obj.version,
+      self.obj.get_tag(self.obj.version)) or self.obj.version
+
+  def get_changelog_managers(self) -> t.Iterable[ChangelogManager]:
+    yield from super().get_changelog_managers()
+    if self.obj.release.single_version:
+      for package in self.project.packages:
+        yield from PackageBumpData(self.args, self.project, package).get_changelog_managers()
+
+
+class PackageBumpData(VersionBumpData[PackageModel]):
+
+  def loaded(self) -> None:
+    error_s = colored('error', 'red', attrs=['bold', 'underline'])
+
+    # Cannot bump a package if the managed files are out-dated.
+    files = get_files(self.obj)
+    if files.get_modified_files(self.obj.get_directory()):
+      command = colored("shut pkg update", "green", attrs=["bold", "underline"])
+      print(f'{error_s}: cannot bump package version while some managed files '
+            f'are outdated. run  {command} to fix.', file=sys.stderr)
+      sys.exit(1)
+
+    # Cannot bump a package that is part of a mono repository and that mono
+    # repository has $.release.single-version enabled.
+    if self.project.monorepo and self.project.monorepo.release.single_version:
+      if self.args.force:
+        logger.warning(
+          'forcing version bump on individual package version that is usually managed '
+          'by the monorepo.')
+        return
+      print(f'{error_s}: cannot bump package tied to a monorepo single-version.', file=sys.stderr)
+      sys.exit(1)
+
+  def update(self, new_version: Version) -> VirtualFiles:
+    self.obj.version = new_version
+    vfiles = update_package(self.obj, dry=self.args.dry, indent=1)
+    return vfiles
+
+  def get_snapshot_version(self) -> Version:
+    project = self.project
+    if project.monorepo and project.monorepo.release.single_version:
+      subject = project.monorepo
+    else:
+      subject = self.obj
+    return get_commit_distance_version(
+      subject.directory,
+      subject.version,
+      subject.get_tag(subject.get_version())) or subject.get_version()
+
+
+mono.command()(make_bump_command(MonorepoBumpdata, MonorepoModel))
+pkg.command()(make_bump_command(PackageBumpData, PackageModel))

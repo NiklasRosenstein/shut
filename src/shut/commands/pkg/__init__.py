@@ -40,10 +40,9 @@ def pkg(ctx, run_checks):
 
 
 from . import build
-from . import bump
-from . import checks
 from . import new
 from . import publish
 from . import requirements
 from . import status
 from . import update
+from shut.commands.commons import checks

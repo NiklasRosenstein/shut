@@ -22,16 +22,23 @@
 import builtins
 import sys
 import time
+import typing as t
 from functools import partial
-from typing import List
 
+import click
 import termcolor
+from nr.stream import Stream
+from termcolor import colored
 
-from shut.checkers import Check, CheckStatus
+from shut.checkers import Check, CheckStatus, get_checks
+from shut.commands import project
+from shut.commands.mono import mono
+from shut.commands.pkg import pkg
+from shut.model import MonorepoModel, PackageModel, Project
 
 
 def print_checks(
-  checks: List[Check],
+  checks: t.List[Check],
   emojis: bool = True,
   colors: bool = True,
   prefix: str = '',
@@ -80,9 +87,10 @@ def print_checks(
   if num_printed > 0:
     print()
 
+
 def print_checks_all(
   name: str,
-  checks: List[Check],
+  checks: t.List[Check],
   seconds: float,
   skip_positive_checks: bool = False,
   print_stats: bool = True,
@@ -94,7 +102,7 @@ def print_checks_all(
     print('ran', len(checks), 'checks for package', package_name, 'in {:.3f}s'.format(seconds))
 
 
-def get_checks_status(checks: List[Check], warnings_as_errors: bool = False) -> int:
+def get_checks_status(checks: t.List[Check], warnings_as_errors: bool = False) -> int:
   max_level = max(x.result.status for x in checks)
   if max_level == CheckStatus.PASSED:
     status = 0
@@ -105,3 +113,73 @@ def get_checks_status(checks: List[Check], warnings_as_errors: bool = False) -> 
   else:
     assert False, max_level
   return status
+
+
+def check_monorepo(
+  monorepo: MonorepoModel,
+  warnings_as_errors: bool = False,
+  skip_positive_checks: bool = False,
+  print_stats: bool = True,
+  use_stderr: bool = False,
+) -> int:
+  start_time = time.perf_counter()
+  checks = sorted(get_checks(monorepo), key=lambda c: c.name)
+  seconds = time.perf_counter() - start_time
+  print_checks_all(monorepo.name, checks, seconds,
+    skip_positive_checks=skip_positive_checks, print_stats=print_stats,
+    use_stderr=use_stderr)
+  return get_checks_status(checks, warnings_as_errors)
+
+
+def get_package_checks(package: PackageModel) -> t.List[Check]:
+  checks = list(get_checks(package))
+  if package.project.monorepo:
+    # Inherit mono-repo checks if the check targets the package specifically.
+    for check in get_checks(package.project.monorepo):
+      if check.result.subject == package:
+        checks.append(check)
+  return sorted(checks, key=lambda c: c.name)
+
+
+def check_package(
+  package: PackageModel,
+  warnings_as_errors: bool = False,
+  skip_positive_checks: bool = False,
+  print_stats: bool = True,
+  use_stderr: bool = False,
+) -> int:
+  start_time = time.perf_counter()
+  checks = get_package_checks(package)
+  seconds = time.perf_counter() - start_time
+  print_checks_all(package.name, checks, seconds,
+    skip_positive_checks=skip_positive_checks, print_stats=print_stats,
+    use_stderr=use_stderr)
+  return get_checks_status(checks, warnings_as_errors)
+
+
+@mono.command()
+@click.option('-w', '--warnings-as-errors', is_flag=True)
+def checks(warnings_as_errors):
+  """
+  Sanity-check the package configuration and package files. Which checks are performed
+  depends on the features that are enabled in the package configuration. Usually that
+  will at least include the "setuptools" feature which will perform basic sanity checks
+  on the package configuration and entrypoint definition.
+  """
+
+  monorepo = project.load_or_exit(expect=MonorepoModel)
+  sys.exit(check_monorepo(monorepo, warnings_as_errors))
+
+
+@pkg.command()
+@click.option('-w', '--warnings-as-errors', is_flag=True)
+def checks(warnings_as_errors):
+  """
+  Sanity-check the package configuration and package files. Which checks are performed
+  depends on the features that are enabled in the package configuration. Usually that
+  will at least include the "setuptools" feature which will perform basic sanity checks
+  on the package configuration and entrypoint definition.
+  """
+
+  package = project.load(expect=PackageModel)
+  sys.exit(check_package(package, warnings_as_errors))
