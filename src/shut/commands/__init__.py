@@ -86,3 +86,4 @@ from . import license
 from . import mono
 from . import pkg
 from .commons import install
+from .commons import test

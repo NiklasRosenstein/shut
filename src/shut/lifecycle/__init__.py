@@ -1,5 +1,6 @@
 
 import abc
+import subprocess as sp
 import typing as t
 
 import networkx as nx
@@ -7,6 +8,7 @@ import networkx as nx
 from shut.model.requirements import RequirementsList, VendoredRequirement
 from shut.model.package import PackageModel
 from shut.model.monorepo import MonorepoModel
+from shut.test import Runtime, TestRun, TestStatus, Virtualenv
 from .install import InstallOptions, perform_install
 
 
@@ -79,6 +81,40 @@ class PackageLifecycle(BaseLifecycle):
     # TODO(NiklasRosenstein): Handle extras
 
     return reqs.get_pip_args(self.config.get_directory(), options.develop)
+
+  def test(self, isolate: bool, keep_test_env: bool = False, capture: bool = True) -> TestRun:
+    if not self.config.test_driver:
+      raise RuntimeError('package has no test driver configured')
+    if isolate:
+      venv = Virtualenv(os.path.join(self.config.get_directory(), '.venv-test'))
+      if venv.exists():
+        print('Re-using existing virtual environment at .venv-test ...')
+      else:
+        print('Creating temporary virtual environment at .venv-test ...')
+        venv.create(Runtime.from_env())
+      runtime = venv.get_runtime()
+      print(f'Installing package "{self.config.name}" and test requirements ...')
+      try:
+        orig_cwd = os.getcwd()
+        os.chdir(self.config.get_directory())
+        shut(['pkg', '--no-checks', 'install', '--pip', venv.bin('pip'), '--extra', 'test', '-q'], standalone_mode=False)
+      except SystemExit as exc:
+        os.chdir(orig_cwd)
+        if exc.code != 0:
+          raise
+    else:
+      venv = None
+      runtime = Runtime.from_env()
+
+    test_reqs = [req.to_setuptools() for req in self.config.test_driver.get_test_requirements()]
+    if test_reqs:
+      sp.check_call(runtime.pip + ['install', '-q'] + test_reqs)
+
+    try:
+      return self.config.test_driver.test_package(self.config, runtime, capture)
+    finally:
+      if venv and not keep_test_env:
+        venv.rm()
 
   # BaseLifecycle
 

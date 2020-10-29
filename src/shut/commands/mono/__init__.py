@@ -44,5 +44,4 @@ from . import checks
 from . import new
 from . import publish
 from . import status
-from . import test
 from . import update

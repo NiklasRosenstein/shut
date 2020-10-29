@@ -19,58 +19,20 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import os
-import subprocess as sp
 import sys
+import time
 
 import click
 from termcolor import colored
 
-from shut.commands import shut
+from shut.commands import project
+from shut.commands.mono import mono
+from shut.commands.pkg import pkg
 from shut.model.package import PackageModel
+from shut.model.monorepo import MonorepoModel
+from shut.lifecycle import MonorepoModel, PackageLifecycle
 from shut.test import Runtime, TestRun, TestStatus, Virtualenv
 from shut.utils.text import indent_text
-from . import pkg, project
-
-
-def test_package(
-  package: PackageModel,
-  isolate: bool,
-  keep_test_env: bool = False,
-  capture: bool = True,
-) -> TestRun:
-  if not package.test_driver:
-    raise RuntimeError('package has no test driver configured')
-  if isolate:
-    venv = Virtualenv(os.path.join(package.get_directory(), '.venv-test'))
-    if venv.exists():
-      print('Re-using existing virtual environment at .venv-test ...')
-    else:
-      print('Creating temporary virtual environment at .venv-test ...')
-      venv.create(Runtime.from_env())
-    runtime = venv.get_runtime()
-    print(f'Installing package "{package.name}" and test requirements ...')
-    try:
-      orig_cwd = os.getcwd()
-      os.chdir(package.get_directory())
-      shut(['pkg', '--no-checks', 'install', '--pip', venv.bin('pip'), '--extra', 'test', '-q'], standalone_mode=False)
-    except SystemExit as exc:
-      os.chdir(orig_cwd)
-      if exc.code != 0:
-        raise
-  else:
-    venv = None
-    runtime = Runtime.from_env()
-
-  test_reqs = [req.to_setuptools() for req in package.test_driver.get_test_requirements()]
-  if test_reqs:
-    sp.check_call(runtime.pip + ['install', '-q'] + test_reqs)
-
-  try:
-    return package.test_driver.test_package(package, runtime, capture)
-  finally:
-    if venv and not keep_test_env:
-      venv.rm()
 
 
 def print_test_run(test_run: TestRun) -> None:
@@ -134,6 +96,81 @@ def print_test_run(test_run: TestRun) -> None:
   print(colored(status_line, 'grey'))
 
 
+@mono.command()
+@click.option('--isolate/--no-isolate', default=False,
+  help='Isolate all test runs in virtual environments. This greatly increases the duration '
+       'for tests to run as the environment needs to be created and packages installed first, '
+       'but it ensures that the unit tests work for a vanilla installation (default: false)')
+@click.option('--keep-test-env', is_flag=True,
+  help='Do not delete the virtual environment created when testing with --isolate.')
+@click.option('--capture/--no-capture', default=True,
+  help='Capture the output of the underlying testing framework. If set to false, the output '
+       'will be routed to stderr (default: true)')
+@click.option('--only', help='Comma-separated list of packages to test.')
+def test(isolate: bool, keep_test_env: bool, capture: bool, only: str) -> None:
+  """
+  Run unit tests for all packages in the mono repository.
+  """
+
+  monorepo = project.load_or_exit(expect=MonorepoModel)
+
+  if only:
+    packages = []
+    package_map = {p.name: p for p in project.packages}
+    for package_name in only.split(','):
+      if package_name not in package_map:
+        sys.exit(f'error: package "{package_name}" does not exist')
+      package = package_map[package_name]
+      if not package.test_driver:
+        sys.exit(f'error: package "{package_name}" has no test driver configured')
+      packages.append(package)
+  else:
+    packages = list(filter(lambda p: p.test_driver, project.packages))
+
+  packages = sorted(packages, key=lambda p: p.name)
+
+  print(f'Going to test {len(packages)} package(s):')
+  for package in packages:
+    print(f'  {colored(package.name, "yellow")}')
+  print()
+
+  exit_code = 0
+  all_tests = []
+  all_errors = []
+  package_statuses = []
+  tstart = time.perf_counter()
+
+  for i, package in enumerate(packages):
+    if i > 0:
+      print()
+    print(f'Testing package {colored(package.name, "yellow", attrs=["bold"])}:')
+    print()
+    test_run = PackageLifecycle(package).test(isolate, keep_test_env, capture)
+    all_tests += test_run.tests
+    all_errors += test_run.errors
+    print_test_run(test_run)
+    if test_run.status != TestStatus.PASSED:
+      exit_code = 1
+    package_statuses.append((package, test_run.status))
+
+  n_passed = sum(1 for t in all_tests if t.status == TestStatus.PASSED)
+  n_skipped = sum(1 for t in all_tests if t.status == TestStatus.SKIPPED)
+  duration = time.perf_counter() - tstart
+
+  print()
+  print(colored('Monorepo summary:', attrs=['bold', 'underline']))
+  print()
+  print(f'Ran {len(all_tests)} test(s) in {duration:.3f}s ({n_passed} passed, '
+        f'{n_skipped} skipped, {len(all_tests) - n_passed} failed, {len(all_errors)} error(s)). '
+        f'{"PASSED" if exit_code == 0 else "FAILED"}')
+  print()
+  for package, status in package_statuses:
+    color = {TestStatus.PASSED: 'green', TestStatus.SKIPPED: 'yellow', TestStatus.FAILED: 'red', TestStatus.ERROR: 'red'}[status]
+    print(f'  {colored(package.name, color, attrs=["bold"])} {status.name}')
+
+  sys.exit(exit_code)
+
+
 @pkg.command()
 @click.option('--isolate/--no-isolate', default=False,
   help='Isolate all test runs in virtual environments. This greatly increases the duration '
@@ -150,6 +187,6 @@ def test(isolate: bool, keep_test_env: bool, capture: bool) -> None:
   """
 
   package = project.load_or_exit(expect=PackageModel)
-  test_run = test_package(package, isolate, keep_test_env, capture)
+  test_run = PackageLifecycle(package).test(isolate, keep_test_env, capture)
   print_test_run(test_run)
   sys.exit(0 if test_run.status == TestStatus.PASSED else 1)
