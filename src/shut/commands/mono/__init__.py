@@ -40,6 +40,5 @@ def mono(ctx, run_checks):
 
 
 from . import new
-from . import publish
 from . import status
 from . import update

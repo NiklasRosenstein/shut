@@ -39,9 +39,7 @@ def pkg(ctx, run_checks):
     checks.check_package(package, skip_positive_checks=True, print_stats=False, use_stderr=True)
 
 
-from . import build
 from . import new
-from . import publish
 from . import requirements
 from . import status
 from . import update

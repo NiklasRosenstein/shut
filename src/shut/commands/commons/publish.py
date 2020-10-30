@@ -21,20 +21,52 @@
 
 import os
 import sys
-from typing import List
+import typing as t
 
 import click
 from nr.stream import groupby, Stream
 from termcolor import colored
 
 from shut.builders import get_builders
-from shut.model import PackageModel
+from shut.commands.commons.build import run_builds
+from shut.model.monorepo import MonorepoModel, PackageModel
 from shut.model.target import TargetId
 from shut.publishers import Publisher, get_publishers
 from shut.publishers.warehouse import WarehousePublisher
-from . import pkg
-from .build import run_builds
-from .. import project
+from shut.commands import project
+from shut.commands.mono import mono
+from shut.commands.pkg import pkg
+
+
+@mono.command()
+@click.argument('target', type=lambda s: TargetId.parse(s, True))
+@click.option('-t', '--test', is_flag=True, help='publish to the test repository instead')
+@click.option('-v', '--verbose', is_flag=True, help='show more output')
+@click.option('-b', '--build-dir', default='build', help='build output directory')
+@click.option('--skip-build', is_flag=True, help='do not build artifacts that are to be published')
+@click.option('-ff', '--fast-fail', is_flag=True, help='Fail after the first error.')
+def publish(target, test, verbose, build_dir, skip_build, fast_fail):
+  """
+  Call `shut pkg publish` for every package. The mono repository must be single versioned
+  in order to run this command.
+  """
+
+  monorepo = project.load_or_exit(expect=MonorepoModel)
+  if not monorepo.release.single_version:
+    sys.exit('error: $.release.single-version is not enabled')
+
+  ok = True
+  for package in project.packages:
+    try:
+      publish_package(package, target, build_dir, skip_build, test, verbose)
+    except PublishError as exc:
+      ok = False
+      print(f'error in {colored(package.name, "yellow")}: {exc}', file=sys.stderr)
+      if fast_fail:
+        sys.exit(1)
+
+  sys.exit(0 if ok else 1)
+
 
 
 class PublishError(Exception):

@@ -85,7 +85,9 @@ from . import conda_forge
 from . import license
 from . import mono
 from . import pkg
+from .commons import build
 from .commons import bump
 from .commons import checks
 from .commons import install
+from .commons import publish
 from .commons import test

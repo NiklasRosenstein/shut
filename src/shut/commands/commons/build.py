@@ -28,10 +28,10 @@ from nr.stream import groupby
 from termcolor import colored
 
 from shut.builders import Builder, get_builders
+from shut.commands import project
+from shut.commands.pkg import pkg
 from shut.model import PackageModel
 from shut.model.target import TargetId
-from . import pkg
-from .. import project
 
 
 def run_builds(builders: List[Builder], build_dir: str, verbose: bool) -> bool:
