@@ -28,14 +28,14 @@ from nr.stream import groupby, Stream
 from termcolor import colored
 
 from shut.builders import get_builders
-from shut.commands.commons.build import run_builds
+from shut.commands.build import run_builds
 from shut.model.monorepo import MonorepoModel, PackageModel
 from shut.model.target import TargetId
 from shut.publishers import Publisher, get_publishers
 from shut.publishers.warehouse import WarehousePublisher
 from shut.commands import project
-from shut.commands.mono import mono
-from shut.commands.pkg import pkg
+from shut.commands import mono
+from shut.commands import pkg
 
 
 @mono.command()

@@ -26,8 +26,8 @@ import click
 from termcolor import colored
 
 from shut.commands import project
-from shut.commands.mono import mono
-from shut.commands.pkg import pkg
+from shut.commands import mono
+from shut.commands import pkg
 from shut.model.package import PackageModel
 from shut.model.monorepo import MonorepoModel
 from shut.lifecycle import MonorepoModel, PackageLifecycle

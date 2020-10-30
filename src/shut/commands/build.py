@@ -28,8 +28,7 @@ from nr.stream import groupby
 from termcolor import colored
 
 from shut.builders import Builder, get_builders
-from shut.commands import project
-from shut.commands.pkg import pkg
+from shut.commands import pkg, project
 from shut.model import PackageModel
 from shut.model.target import TargetId
 

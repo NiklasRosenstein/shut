@@ -31,9 +31,9 @@ from nr.stream import concat
 from termcolor import colored
 
 from shut.commands import project
+from shut.commands import pkg
 from shut.model import dump, PackageModel
 from shut.model.requirements import Requirement, VersionSelector, VendoredRequirement
-from . import pkg
 
 logger = logging.getLogger(__name__)
 

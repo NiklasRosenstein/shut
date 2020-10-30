@@ -32,8 +32,8 @@ from termcolor import colored
 
 from shut.checkers import Check, CheckStatus, get_checks
 from shut.commands import project
-from shut.commands.mono import mono
-from shut.commands.pkg import pkg
+from shut.commands import mono
+from shut.commands import pkg
 from shut.model import MonorepoModel, PackageModel, Project
 
 

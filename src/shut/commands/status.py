@@ -26,7 +26,11 @@ from typing import Union
 from nr.utils.git import Git
 from termcolor import colored
 
-from shut.model import AbstractProjectModel, MonorepoModel, Project
+from shut.commands import project
+from shut.commands.status import print_status
+from shut.commands import mono
+from shut.commands import pkg
+from shut.model import AbstractProjectModel, MonorepoModel, PackageModel, Project
 
 
 def get_commits_since_last_tag(subject: AbstractProjectModel):
@@ -68,3 +72,20 @@ def print_status(project: Project) -> None:
     else:
       item_info = colored('{} commit(s)'.format(num_commits), 'yellow') + ' since "{}"'.format(tag)
     print('{}: {}'.format(name.rjust(width), item_info))
+
+
+@mono.command(help="""
+  Show which packages have been modified since their last release.
+  """ + print_status.__doc__)
+def status():
+
+  project.load_or_exit(expect=MonorepoModel)
+  print_status(project)
+
+
+@pkg.command(help="""
+  Shows whether the package was modified since the last release.
+  """ + print_status.__doc__)
+def status():
+  project.load_or_exit(expect=PackageModel)
+  print_status(project)

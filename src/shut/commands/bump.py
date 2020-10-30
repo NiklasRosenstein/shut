@@ -36,12 +36,11 @@ from termcolor import colored
 from shut.changelog.manager import ChangelogManager
 from shut.changelog.v3 import Changelog
 from shut.commands import project
-from shut.commands.commons.checks import check_monorepo
-from shut.commands.commons.checks import check_package
-from shut.commands.mono import mono
-from shut.commands.mono.update import update_monorepo
-from shut.commands.pkg import pkg
-from shut.commands.pkg.update import update_package
+from shut.commands.checks import check_monorepo
+from shut.commands.checks import check_package
+from shut.commands.update import update_monorepo, update_package
+from shut.commands import mono
+from shut.commands import pkg
 from shut.model import AbstractProjectModel, MonorepoModel, PackageModel, Project
 from shut.model.version import bump_version, parse_version, Version
 from shut.renderers import get_files, get_version_refs, VersionRef

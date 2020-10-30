@@ -79,15 +79,41 @@ def shut(cwd, verbose, quiet, disable_warnings):
     warnings.simplefilter("default") # Change the filter in this process
 
 
+@shut.group(help=__doc__)
+@click.option('--checks/--no-checks', 'run_checks', default=True,
+  help='Run checks before executing the subcommand (default: true)')
+@click.pass_context
+def mono(ctx, run_checks):
+  """
+  Manage the current mono repository.
+  """
+
+  if run_checks and ctx.invoked_subcommand not in ('new', 'checks'):
+    monorepo = project.load(expect=MonorepoModel)
+    checks.check_monorepo(monorepo, skip_positive_checks=True, print_stats=False, use_stderr=True)
+
+
+@shut.group()
+@click.option('--checks/--no-checks', 'run_checks', default=True,
+  help='Run checks before executing the subcommand (default: true)')
+@click.pass_context
+def pkg(ctx, run_checks):
+  """
+  Manage the Python package in the current directory.
+  """
+
+  if run_checks and ctx.invoked_subcommand not in ('new', 'checks'):
+    package = project.load(expect=PackageModel)
+    checks.check_package(package, skip_positive_checks=True, print_stats=False, use_stderr=True)
+
+
 from . import changelog
 from . import classifiers
 from . import conda_forge
 from . import license
-from . import mono
-from . import pkg
-from .commons import build
-from .commons import bump
-from .commons import checks
-from .commons import install
-from .commons import publish
-from .commons import test
+from . import build
+from . import bump
+from . import checks
+from . import install
+from . import publish
+from . import test

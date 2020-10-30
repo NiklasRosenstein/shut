@@ -29,7 +29,7 @@ from termcolor import colored
 import click
 import yaml
 
-from .. import shut, commons, project
+from shut.commands import shut, project
 from shut.changelog import v3
 from shut.changelog.manager import ChangelogManager
 from shut.changelog.render import render as render_changelogs
