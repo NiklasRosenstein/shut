@@ -32,8 +32,11 @@ from termcolor import colored
 from shut.commands import mono
 from shut.commands import pkg
 from shut.model import dump
+from shut.model.monorepo import MonorepoModel
+from shut.model.package import PackageModel
 from shut.model.author import Author
 from shut.model.requirements import Requirement, VersionSelector
+from shut.model.version import Version
 from shut.utils.external.license import get_license_metadata, wrap_license_text
 from shut.utils.io.virtual import VirtualFiles
 

@@ -23,15 +23,16 @@
 This package implements the Shut CLI.
 """
 
-from shut import __version__
-from shut.model import Project
-from nr.proxy import proxy
-
-import click
 import logging
 import os
 import warnings
 import sys
+
+import click
+from nr.proxy import proxy
+
+from shut import __version__
+from shut.model import Project, PackageModel, MonorepoModel
 
 context = proxy(lambda: click.get_current_context().obj)
 project = proxy(lambda: click.get_current_context().obj['project'])

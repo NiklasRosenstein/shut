@@ -18,6 +18,9 @@ class InstallOptions:
   # Whether to upgrade dependencies during the installation.
   upgrade: bool = False
 
+  # Install inter dependencies.
+  inter_deps: bool = True
+
   # A set of extras to install for the package.
   extras: t.Optional[t.Set[str]] = None
 

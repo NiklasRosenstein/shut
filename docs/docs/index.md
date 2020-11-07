@@ -1,6 +1,15 @@
 # Welcome to the Shut documentation
 
-Shut is an opinionated release management tool for pure Python packages and mono repositories.
+Shut is an opinionated release management tool for pure Python packages.
+
+__Supported Workflows__
+
+* [Bootstrap a new Python project](workflows/new-project)
+* [Auto-generate setup.py and supporting files](workflows/generate-files)
+* [Correctness checks](workflows/correctness-checks)
+* [Release management](workflows/release-management)
+* [Changelog management](workflows/changelog.md)
+
 Among it's features is the automatic generation of setuptools files, sanity checks, version number
 bumping and release publishing as well as changelog management.
 

@@ -4,6 +4,7 @@ import subprocess as sp
 import typing as t
 
 import networkx as nx
+from nr.stream import concat
 
 from shut.model.requirements import RequirementsList, VendoredRequirement
 from shut.model.package import PackageModel
@@ -34,12 +35,12 @@ class MonorepoLifecycle(BaseLifecycle):
   def install(self, options: InstallOptions) -> None:
 
     # Order the packages in topological order.
-    graph = monorepo.get_inter_dependencies_graph()
-    package_map = {p.name: p for p in project.packages}
+    graph = self.config.get_inter_dependencies_graph()
+    package_map = {p.name: p for p in self.config.project.packages}
     packages = [package_map[p] for p in nx.algorithms.dag.topological_sort(graph)]
 
     # Generate the install arguments for each of the packages.
-    args = [PackageLifecycle(p).get_install_args(options) for p in packages]
+    args = list(concat(PackageLifecycle(p).get_install_args(options) for p in packages))
 
     perform_install(options, args)
 
@@ -65,7 +66,7 @@ class PackageLifecycle(BaseLifecycle):
     reqs.append(VendoredRequirement(VendoredRequirement.Type.Path, self.config.get_directory()))
     reqs += self.config.requirements.vendored_reqs()
 
-    if self.config.project.monorepo and inter_deps:
+    if self.config.project.monorepo and options.inter_deps:
       # TODO(NiklasRosenstein): get_inter_dependencies_for() does not currently differentiate
       #   between normal, test and extra requirements.
       project_packages = {p.name: p for p in self.config.project.packages}
