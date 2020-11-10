@@ -108,13 +108,17 @@ def pkg(ctx, run_checks):
     checks.check_package(package, skip_positive_checks=True, print_stats=False, use_stderr=True)
 
 
-from . import changelog
-from . import classifiers
-from . import conda_forge
-from . import license
 from . import build
 from . import bump
+from . import changelog
 from . import checks
+from . import classifiers
+from . import conda_forge
 from . import install
+from . import license
+from . import new
 from . import publish
+from . import requirements
+from . import status
 from . import test
+from . import update

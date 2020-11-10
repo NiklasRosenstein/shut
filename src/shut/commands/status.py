@@ -26,10 +26,7 @@ from typing import Union
 from nr.utils.git import Git
 from termcolor import colored
 
-from shut.commands import project
-from shut.commands.status import print_status
-from shut.commands import mono
-from shut.commands import pkg
+from shut.commands import mono, pkg, project
 from shut.model import AbstractProjectModel, MonorepoModel, PackageModel, Project
 
 
