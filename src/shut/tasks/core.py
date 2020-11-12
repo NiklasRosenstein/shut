@@ -7,7 +7,7 @@ import weakref
 
 import networkx as nx
 
-from shut.utils import expect
+from shut.utils import expect, ReadOnlyMapping
 
 
 class Skip(Exception):
@@ -170,11 +170,11 @@ class TaskGroup(_NamedObject):
 
   @property
   def groups(self) -> t.Mapping[str, 'TaskGroup']:
-    return collections.MappingView(self._groups)
+    return ReadOnlyMapping(self._groups)
 
   @property
   def tasks(self) -> t.Mapping[str, 'Task']:
-    return collections.MappingView(self._tasks)
+    return ReadOnlyMapping(self._tasks)
 
   def add_group(self, group: 'TaskGroup') -> None:
     """
@@ -229,10 +229,14 @@ class TaskGraph(TaskGroup):
   Represents a directed graph of tasks.
   """
 
-  def __init__(self):
+  EventListenerFunc = t.Callable[[str, t.Any], None]
+
+  def __init__(self, event_listener: t.Optional[EventListenerFunc] = None):
     self._tasks: t.Dict[str, Task] = {}
     self._groups: t.Dict[str, TaskGroup] = {}
     self._graph = nx.DiGraph()
+    self._event_listener = event_listener
+    self.custom_data: t.Dict[str, Any] = {}
 
   def __contains__(self, task: t.Union[str, Task]) -> bool:
     if isinstance(task, Task):
@@ -241,6 +245,12 @@ class TaskGraph(TaskGroup):
       return task.id in self._tasks
     else:
       return False
+
+  def __getitem__(self, name: str) -> t.Union[Task, TaskGroup]:
+    try:
+      return self._groups[name]
+    except KeyError:
+      return self._tasks[name]
 
   def _add_edge(self, a: Task, b: Task) -> None:
     assert isinstance(a, Task)
@@ -255,6 +265,15 @@ class TaskGraph(TaskGroup):
     self._groups[group.id] = group
     group._graph = weakref.ref(self)
 
+  def create_group(self, name: str, parent: t.Optional[TaskGroup] = None) -> TaskGroup:
+    group = TaskGroup(name)
+    if parent:
+      assert parent.graph is self
+      parent.add_group(group)
+    else:
+      self.add_group(group)
+    return group
+
   def add_task(self, task: Task) -> None:
     assert isinstance(task, Task)
     assert not task.graph
@@ -266,21 +285,41 @@ class TaskGraph(TaskGroup):
 
   @property
   def groups(self) -> t.Mapping[str, TaskGroup]:
-    return collections.MappingView(self._groups)
+    return ReadOnlyMapping(self._groups)
 
   @property
   def tasks(self) -> t.Mapping[str, Task]:
-    return collections.MappingView(self._tasks)
+    return ReadOnlyMapping(self._tasks)
 
-  def ordered_tasks(self, select: t.Optional[t.List[Task]] = None) -> t.List[Task]:
+  def select(self, value: t.Union[str, t.List[str]]) -> t.List[Task]:
+    """
+    Selects a set of tasks by their ID or parent group ID.
+    """
+
+    if isinstance(value, str):
+      value = [value]
+
+    tasks = set()
+    for name in value:
+      item = self[name]
+      if isinstance(item, TaskGroup):
+        tasks.update(item.tasks.values())
+        tasks.update([g.id for g in item.groups.values()])
+      else:
+        tasks.add(item)
+
+    return tasks
+
+  def ordered_tasks(self, select: t.Union[str, t.List[str], None] = None) -> t.List[Task]:
     """
     Returns a list of tasks in the order they need to be executed. If *select* is specified,
     the returned list only includes the tasks that need to be executed for the selected tasks.
+    You can also select groups of tasks.
     """
 
     if select is not None:
       # Create a copy of the graph that contains only the selected tasks and their in nodes.
-      stack = collections.deque([t.id for t in select])
+      stack = collections.deque(t.id for t in self.select(select))
       nodes: t.Set[str] = set()
       while stack:
         task_id = stack.popleft()
@@ -292,3 +331,7 @@ class TaskGraph(TaskGroup):
       graph = self._graph
 
     return [self._tasks[t_id] for t_id in nx.algorithms.topological_sort(graph)]
+
+  def trigger_event(self, event_name: str, data: t.Any) -> None:
+    if self._event_listener:
+      self._event_listener(event_name, data)
