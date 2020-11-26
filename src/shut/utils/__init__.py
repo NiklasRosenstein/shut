@@ -17,7 +17,22 @@ def expect(val: t.Optional[T], message: t.Optional[str] = None) -> T:
   return val
 
 
-class ReadOnlyMapping(collections.Mapping, t.Generic[K, V]):
+def checked_cast(val: t.Any, expected_type: t.Type[T]) -> T:
+  """
+  Cast *val* to the specified type(s) and check it.
+  """
+
+  if hasattr(expected_type, '__origin__'):
+    # NOTE(NiklasRosenstein): We do not check specialized types recursively.
+    expected_type = expected_type.__origin__
+
+  if not isinstance(val, expected_type):
+    raise TypeError(f'expected on of {type(expected_type).__name__}, got {type(val).__name__}')
+
+  return val
+
+
+class ReadOnlyMapping(collections.abc.Mapping, t.Generic[K, V]):
 
   def __init__(self, data: t.Mapping[K, V]) -> None:
     self._data = data

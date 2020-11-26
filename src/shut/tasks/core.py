@@ -9,6 +9,12 @@ import networkx as nx
 
 from shut.utils import expect, ReadOnlyMapping
 
+#: Graph event sent when #Task.execute() is called. The event payload is the task object.
+EVENT_TASK_BEGIN = 'task.begin'
+
+#: Graph event sent when #Task.execute() finishes. The event payload is the task object.
+EVENT_TASK_END = 'task.end'
+
 
 class Skip(Exception):
   pass
@@ -18,6 +24,11 @@ class ExcInfo(t.NamedTuple):
   type: t.Type[BaseException]
   val: BaseException
   tb: types.TracebackType
+
+  def reraise(self) -> t.NoReturn:
+    if self.val.__traceback__ is not self.tb:
+      raise self.val.with_traceback(self.tb)
+    raise self.value
 
 
 class _NamedObject:
@@ -122,7 +133,7 @@ class Task(_NamedObject):
       raise RuntimeError(f'task "{self.id}" was already executed (status: {self.status.name})')
 
     self._status = TaskStatus.RUNNING
-    self.graph.trigger_event('task.begin', self)
+    self.graph.trigger_event(EVENT_TASK_BEGIN, self)
     try:
       self._execute_internal()
       self._status = TaskStatus.SUCCESS
@@ -132,7 +143,7 @@ class Task(_NamedObject):
       self._status = TaskStatus.ERROR
       self._error = ExcInfo(*sys.exc_info())
     finally:
-      self.graph.trigger_event('task.end', self)
+      self.graph.trigger_event(EVENT_TASK_END, self)
 
   def _execute_internal(self) -> None:
     raise NotImplementedError
@@ -310,6 +321,19 @@ class TaskGraph(TaskGroup):
 
     return tasks
 
+  def _subgraph(self, task_ids: t.List[str]) -> nx.DiGraph:
+    """
+    Internal. Generates a subgraph for the specified task IDs.
+    """
+
+    stack = collections.deque(task_ids)
+    nodes: t.Set[str] = set()
+    while stack:
+      task_id = stack.popleft()
+      nodes.add(task_id)
+      stack.extend(e[0] for e in self._graph.in_edges(task_id))
+    return self._graph.subgraph(nodes)
+
   def ordered_tasks(self, select: t.Union[str, t.List[str], None] = None) -> t.List[Task]:
     """
     Returns a list of tasks in the order they need to be executed. If *select* is specified,
@@ -318,18 +342,9 @@ class TaskGraph(TaskGroup):
     """
 
     if select is not None:
-      # Create a copy of the graph that contains only the selected tasks and their in nodes.
-      stack = collections.deque(t.id for t in self.select(select))
-      nodes: t.Set[str] = set()
-      while stack:
-        task_id = stack.popleft()
-        nodes.add(task_id)
-        stack.extend(e[0] for e in self._graph.in_edges(task_id))
-      graph = self._graph.subgraph(nodes)
-
+      graph = self._subgraph(t.id for t in self.select(select))
     else:
       graph = self._graph
-
     return [self._tasks[t_id] for t_id in nx.algorithms.topological_sort(graph)]
 
   def trigger_event(self, event_name: str, data: t.Any) -> None:
