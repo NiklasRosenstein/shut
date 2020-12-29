@@ -1,0 +1,6 @@
+release_date: null
+changes:
+- type: fix
+  component: general
+  description: fix error rendering `setup.py` if the license file did not exist
+  fixes: []
