@@ -20,6 +20,7 @@
 # IN THE SOFTWARE.
 
 import click
+import sys
 
 from shut.commands import shut, commons, project
 from shut.model import Project, PackageModel
@@ -37,6 +38,15 @@ def pkg(ctx, run_checks):
   if run_checks and ctx.invoked_subcommand not in ('new', 'checks'):
     package = project.load(expect=PackageModel)
     checks.check_package(package, skip_positive_checks=True, print_stats=False, use_stderr=True)
+
+
+@pkg.command()
+def get_version():
+  package = project.load(expect=PackageModel)
+  if not package.version:
+    click.echo('version not defined', err=True)
+    sys.exit(1)
+  print(package.version)
 
 
 from . import build

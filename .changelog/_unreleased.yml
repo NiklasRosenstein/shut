@@ -4,3 +4,7 @@ changes:
   component: general
   description: fix error rendering `setup.py` if the license file did not exist
   fixes: []
+- type: feature
+  component: general
+  description: add `get-version` command to `shut mono` and `shut pkg`
+  fixes: []

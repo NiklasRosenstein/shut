@@ -20,6 +20,7 @@
 # IN THE SOFTWARE.
 
 import click
+import sys
 
 from shut.model import MonorepoModel
 from .. import shut, commons, project
@@ -37,6 +38,15 @@ def mono(ctx, run_checks):
   if run_checks and ctx.invoked_subcommand not in ('new', 'checks'):
     monorepo = project.load(expect=MonorepoModel)
     checks.check_monorepo(monorepo, skip_positive_checks=True, print_stats=False, use_stderr=True)
+
+
+@mono.command()
+def get_version():
+  monorepo = project.load(expect=MonorepoModel)
+  if not monorepo.version:
+    click.echo('version not defined', err=True)
+    sys.exit(1)
+  print(monorepo.version)
 
 
 from . import bump
