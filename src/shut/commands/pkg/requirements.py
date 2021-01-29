@@ -81,6 +81,7 @@ def add(packages, test, vendored_packages, develop):
   pip = python + ['-m', 'pip']
   command = pip + ['install'] + [r.to_setuptools() for r in reqs]
   command += concat(x.get_pip_args(package.get_directory(), develop) for x in vendored_reqs)
+  command += package.install.get_pip_args()
   res = subprocess.call(command)
   if res != 0:
     sys.exit('error: pip install failed')

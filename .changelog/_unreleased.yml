@@ -8,3 +8,8 @@ changes:
   component: general
   description: add `get-version` command to `shut mono` and `shut pkg`
   fixes: []
+- type: fix
+  component: general
+  description: '`shut pkg requirements add` now adds the InstallConfiguration pip
+    args'
+  fixes: []
