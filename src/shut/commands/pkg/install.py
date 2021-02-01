@@ -23,13 +23,16 @@ import os
 import shlex
 import subprocess as sp
 import sys
-from typing import cast, List, Optional, Set, Tuple
+import typing as t
+from typing import cast, List, Optional, Set
 
 import click
+import networkx as nx
 from nr.stream import concat
 from termcolor import colored
 
 from shut.model.package import PackageModel
+from shut.model.monorepo import InterdependencyRef
 from shut.model.requirements import Requirement, RequirementsList, VendoredRequirement
 from . import pkg
 from .. import project
@@ -54,10 +57,21 @@ def collect_requirement_args(
   if project.monorepo and inter_deps:
     # TODO(NiklasRosenstein): get_inter_dependencies_for() does not currently differentiate
     #   between normal, test and extra requirements.
-    project_packages = {p.name: p for p in project.packages}
+
+    # In the case of transitive inter-dependencies, we need to make sure to install them
+    # in the right order. For example in the command-line `pip install -e a -e b -e c`, where
+    # package `a` depends on package `b`, Pip is not able to tell that `b` is supplied on the
+    # command-line as well and will instead try to resolve it from PyPI.
+    project_packages: t.Dict[str, PackageModel] = {p.name: p for p in project.packages}
+    direct_inter_dependencies: t.Dict[str, InterdependencyRef]  = {ref.package_name: ref
+      for ref in project.monorepo.get_inter_dependencies_for(package)}
+    graph: nx.DiGraph = project.monorepo.get_inter_dependencies_graph().subgraph(
+      direct_inter_dependencies)
+
     insert_index = 0
-    for ref in project.monorepo.get_inter_dependencies_for(package):
-      dep = project_packages[ref.package_name]
+    for dep_name in nx.algorithms.topological_sort(graph):
+      dep = project_packages[dep_name]
+      ref = direct_inter_dependencies[dep_name]
       if not ref.version_selector.matches(dep.version):
         print('note: skipping inter-dependency on package "{}" because the version selector '
               '{} does not match the present version {}'
@@ -72,7 +86,6 @@ def collect_requirement_args(
 def run_install(
   pip: Optional[str],
   args: List[str],
-  develop: bool,
   upgrade: bool,
   quiet: bool,
   dry: bool,
@@ -105,11 +118,12 @@ def split_extras(extras: str) -> Set[str]:
 @click.option('--extra', type=split_extras, help='Specify one or more extras to install.')
 @click.option('-U', '--upgrade', is_flag=True, help='Upgrade all packages (forwarded to pip install).')
 @click.option('-q', '--quiet', is_flag=True, help='Quiet install')
+@click.option('-v', '--verbose', is_flag=True, help='Verbose install')
 @click.option('--pip', help='Override the command to run Pip. Defaults to "python -m pip" or the PIP variable.')
 @click.option('--pip-args', help='Additional arguments to pass to Pip.')
 @click.option('--dry', is_flag=True, help='Print the Pip command to stdout instead of running it.')
 @click.option('--pipx', is_flag=True, help='Install using Pipx.')
-def install(develop, inter_deps, extra, upgrade, quiet, pip, pip_args, dry, pipx):
+def install(develop, inter_deps, extra, upgrade, quiet, verbose, pip, pip_args, dry, pipx):
   """
   Install the package using `python -m pip`. If the package is part of a mono repository,
   inter-dependencies will be installed from the mono repsitory rather than from PyPI.
@@ -126,6 +140,8 @@ def install(develop, inter_deps, extra, upgrade, quiet, pip, pip_args, dry, pipx
     args += ['--pip-args', ' '.join(map(shlex.quote, package.install.get_pip_args()))]
   else:
     args += package.install.get_pip_args()
+  if verbose:
+    pip_args.append('--verbose')
   if pip_args:
     args += shlex.split(pip_args)
-  run_install(pip, args, develop, upgrade, quiet, dry)
+  run_install(pip, args, upgrade, quiet, dry)
