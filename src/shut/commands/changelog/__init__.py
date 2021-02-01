@@ -24,7 +24,7 @@ import sys
 from typing import List, Optional
 
 from databind.json import from_json, to_json
-from nr.utils.git import Git
+from nr.utils.git import Git  # type: ignore
 from termcolor import colored
 import click
 import yaml

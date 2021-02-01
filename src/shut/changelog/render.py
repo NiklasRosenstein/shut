@@ -25,7 +25,7 @@ changelog version.
 """
 
 from .manager import Changelog
-from nr.stream import Stream
+from nr.stream import Stream  # type: ignore
 from termcolor import colored
 from typing import List, TextIO
 import re

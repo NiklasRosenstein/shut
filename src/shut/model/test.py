@@ -19,12 +19,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from typing import List
-
-from databind.core import datamodel, field, uniontype
+from databind.core import uniontype
 
 from shut.test.pytest import PytestDriver
-from .requirements import Requirement
 
 
 @uniontype

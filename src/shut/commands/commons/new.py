@@ -24,7 +24,7 @@ import subprocess
 from typing import Any, Dict, Optional
 
 import jinja2
-import nr.fs
+import nr.fs  # type: ignore
 from termcolor import colored
 
 from shut.model.author import Author

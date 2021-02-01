@@ -36,7 +36,7 @@ def subprocess_trimmed_call(*args, verbose: bool = False, **kwargs) -> int:
     *args,
     stdout=None if verbose else subprocess.PIPE,
     stderr=None if verbose else subprocess.PIPE,
-    **kwargs)
+    **kwargs)  # type: ignore
 
   stdout, stderr = proc.communicate()
   if stderr:

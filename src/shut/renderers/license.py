@@ -21,7 +21,6 @@
 
 import datetime
 import os
-import typing as t
 
 from pkg_resources import resource_string
 

@@ -21,23 +21,20 @@
 
 import os
 import logging
-import sys
 from typing import Iterable
 
-import click
-import nr.fs
-from nr.stream import Stream
+import nr.fs  # type: ignore
+from nr.stream import Stream  # type: ignore
 from termcolor import colored
 
 from shut.changelog.manager import ChangelogManager
 from shut.commands.commons.bump import make_bump_command, VersionBumpData, VersionRef
 from shut.commands.pkg.bump import PackageBumpData
-from shut.model import MonorepoModel, Project
-from shut.model.version import get_commit_distance_version, parse_version, Version
+from shut.model import MonorepoModel
+from shut.model.version import get_commit_distance_version, Version
 from shut.utils.io.virtual import VirtualFiles
 from shut.utils.text import substitute_ranges
 from . import mono
-from .checks import check_monorepo
 from .update import update_monorepo
 
 logger = logging.getLogger(__name__)

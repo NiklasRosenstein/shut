@@ -24,7 +24,7 @@ import shlex
 import subprocess
 import sys
 
-import nr.fs
+import nr.fs  # type: ignore
 
 __all__ = ['editor_open', 'edit_text']
 

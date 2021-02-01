@@ -22,9 +22,8 @@
 import abc
 from typing import Generic, Iterable, List, T, Type
 
-from nr.stream import concat
+from nr.stream import concat  # type: ignore
 
-from shut.builders import Builder
 from shut.model import AbstractProjectModel
 from shut.model.target import Target, TargetId
 from shut.utils.type_registry import TypeRegistry

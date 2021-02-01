@@ -68,7 +68,7 @@ def register_renderer(t: Type[T_co], renderer: Type[Renderer[T_co]]) -> None:
   registry.put(t, renderer)
 
 
-def get_files(obj: T_co) -> VirtualFiles:
+def get_files(obj: T) -> VirtualFiles:
   """
   Gets all the files from the renderers registered to the type of *obj*.
   """
@@ -80,7 +80,7 @@ def get_files(obj: T_co) -> VirtualFiles:
   return files
 
 
-def get_version_refs(obj: T_co) -> Iterable[VersionRef]:
+def get_version_refs(obj: T) -> Iterable[VersionRef]:
   """
   Gets all version refs returned by registered for type *T_co*.
   """

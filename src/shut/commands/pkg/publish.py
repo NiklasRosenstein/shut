@@ -21,17 +21,15 @@
 
 import os
 import sys
-from typing import List
 
 import click
-from nr.stream import groupby, Stream
+from nr.stream import groupby, Stream  # type: ignore
 from termcolor import colored
 
 from shut.builders import get_builders
 from shut.model import PackageModel
 from shut.model.target import TargetId
-from shut.publishers import Publisher, get_publishers
-from shut.publishers.warehouse import WarehousePublisher
+from shut.publishers import get_publishers
 from . import pkg
 from .build import run_builds
 from .. import project

@@ -22,10 +22,10 @@
 import abc
 from typing import Generic, Iterable, List, Type, TypeVar
 
-from nr.stream import concat
+from nr.stream import concat  # type: ignore
 
 from shut.model import AbstractProjectModel
-from shut.model.target import Target, TargetId
+from shut.model.target import Target
 from shut.utils.type_registry import TypeRegistry
 
 T = TypeVar('T')

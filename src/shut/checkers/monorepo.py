@@ -19,10 +19,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from pathlib import Path
-
 from shut.model import MonorepoModel
-from .base import Check, CheckStatus, CheckResult, Checker, SkipCheck, check, register_checker
+from .base import CheckStatus, CheckResult, Checker, SkipCheck, check, register_checker
 
 
 class MonorepoChecker(Checker[MonorepoModel]):

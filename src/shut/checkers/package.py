@@ -20,9 +20,8 @@
 # IN THE SOFTWARE.
 
 import os
-from typing import Iterable, Optional
+from typing import Iterable
 
-from shut.model import MonorepoModel, Project
 from shut.model.package import PackageError, PackageModel
 from shut.renderers import get_files
 from shut.utils.external.classifiers import get_classifiers

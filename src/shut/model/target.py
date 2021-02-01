@@ -43,7 +43,7 @@ class TargetId:
   def parse(cls, s: str, allow_scope_only: bool = False) -> 'TargetId':
     parts = s.split(':')
     if allow_scope_only and len(parts) == 1:
-      parts = (parts[0], '*')
+      parts = [parts[0], '*']
     return cls(*parts)
 
   def match(self, other_id: 'TargetId', allow_match_name: bool = False) -> bool:

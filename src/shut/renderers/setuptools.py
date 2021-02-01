@@ -29,7 +29,7 @@ import re
 import textwrap
 from typing import Dict, Iterable, List, Optional, TextIO, Tuple
 
-import nr.fs
+import nr.fs  # type: ignore
 
 from shut.model.package import PackageModel, Include, Exclude
 from shut.model.requirements import RequirementsList

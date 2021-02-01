@@ -24,11 +24,10 @@ import json
 import os
 import subprocess as sp
 import sys
-import time
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from databind.core import datamodel, field
-from nr.parsing.date import timezone
+from nr.parsing.date import timezone  # type: ignore
 
 from shut.model.requirements import Requirement
 from .base import (BaseTestDriver, Runtime, StackTrace, TestCase, TestCrashReport,

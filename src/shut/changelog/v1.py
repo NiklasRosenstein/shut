@@ -23,9 +23,9 @@
 The V1 of changelogs.
 """
 
-from typing import List, Generic, Union
+from typing import List, Union
 from databind.core import datamodel, field
-from . import _ChangelogBase, T
+from . import _ChangelogBase
 
 
 @datamodel

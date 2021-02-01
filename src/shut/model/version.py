@@ -23,8 +23,8 @@ import logging
 import re
 from typing import Optional, Union
 
-from databind.core import Context, Converter
-from nr.utils.git import Git
+from databind.core import Converter
+from nr.utils.git import Git  # type: ignore
 from packaging.version import Version as _Version
 
 logger = logging.getLogger(__name__)

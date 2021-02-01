@@ -21,9 +21,8 @@
 
 import os
 import sys
-from typing import Union
 
-from nr.utils.git import Git
+from nr.utils.git import Git  # type: ignore
 from termcolor import colored
 
 from shut.model import AbstractProjectModel, MonorepoModel, Project

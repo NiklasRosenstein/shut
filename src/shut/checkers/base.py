@@ -23,7 +23,7 @@
 API for describing sanity checks around a package or monorepo configuration.
 """
 
-from typing import Callable, Iterable, Generic, NamedTuple, Optional, Type, TypeVar, Union
+from typing import Callable, Iterable, Generic, NamedTuple, Optional, Type, TypeVar
 import enum
 import types
 

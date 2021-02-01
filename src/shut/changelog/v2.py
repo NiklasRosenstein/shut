@@ -24,7 +24,7 @@ The V3 of changelogs.
 """
 
 import enum
-from typing import List, Generic
+from typing import List
 from databind.core import datamodel, field
 from . import _ChangelogBase, v1
 

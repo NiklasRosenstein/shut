@@ -86,4 +86,4 @@ class AbstractProjectModel(metaclass=abc.ABCMeta):
       preferred=['LICENSE', 'LICENSE.txt', 'LICENSE.rst', 'LICENSE.md'])
 
 
-from . import Project
+from . import Project  # pylint: disable=unused-import

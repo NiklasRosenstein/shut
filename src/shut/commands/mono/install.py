@@ -4,7 +4,6 @@ import networkx as nx
 
 from shut.commands.pkg.install import collect_requirement_args, run_install, split_extras
 from shut.model.monorepo import MonorepoModel
-from shut.model.requirements import RequirementsList
 from . import mono, project
 
 

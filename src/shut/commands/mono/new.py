@@ -20,11 +20,8 @@
 # IN THE SOFTWARE.
 
 import datetime
-from typing import Optional
 
-from termcolor import colored
 import click
-import jinja2
 
 from shut.commands.commons.new import (
   GITIGNORE_TEMPLATE,

@@ -24,7 +24,7 @@ import sys
 from typing import List
 
 import click
-from nr.stream import groupby
+from nr.stream import groupby  # type: ignore
 from termcolor import colored
 
 from shut.builders import Builder, get_builders

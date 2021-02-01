@@ -25,10 +25,7 @@ import sys
 from typing import Iterable, List
 from urllib.parse import urlparse
 
-from nr.stream import concat
-
-from shut.builders import Builder
-from shut.model import PackageModel, Project
+from shut.model import PackageModel
 from shut.model.publish import WarehouseCredentials, WarehouseConfiguration
 from shut.model.target import TargetId
 from shut.utils.io.sp import subprocess_trimmed_call

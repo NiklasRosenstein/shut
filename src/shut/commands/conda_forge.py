@@ -23,12 +23,11 @@ import logging
 import re
 import subprocess
 import sys
-from typing import List
 
 import click
-import nr.fs
+import nr.fs  # type: ignore
 import requests
-from nr.utils.git import Git
+from nr.utils.git import Git  # type: ignore
 from termcolor import colored
 
 from shut.model import PackageModel

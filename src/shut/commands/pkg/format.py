@@ -19,11 +19,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import datetime
-import os
-
-import click
-
 from shut.model import dump
 from shut.model.package import PackageModel
 from . import pkg, project

@@ -28,12 +28,10 @@ from typing import cast, List, Optional, Set
 
 import click
 import networkx as nx
-from nr.stream import concat
-from termcolor import colored
 
 from shut.model.package import PackageModel
 from shut.model.monorepo import InterdependencyRef
-from shut.model.requirements import Requirement, RequirementsList, VendoredRequirement
+from shut.model.requirements import RequirementsList, VendoredRequirement
 from . import pkg
 from .. import project
 

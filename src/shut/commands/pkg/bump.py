@@ -19,21 +19,17 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import os
 import logging
 import sys
-from typing import Iterable
 
-import click
 from termcolor import colored
 
-from shut.commands.commons.bump import make_bump_command, VersionBumpData, VersionRef
-from shut.model import PackageModel, Project
-from shut.model.version import get_commit_distance_version, parse_version, Version
+from shut.commands.commons.bump import make_bump_command, VersionBumpData
+from shut.model import PackageModel
+from shut.model.version import get_commit_distance_version, Version
 from shut.renderers import get_files
 from shut.utils.io.virtual import VirtualFiles
 from . import pkg
-from .checks import check_package
 from .update import update_package
 
 logger = logging.getLogger(__name__)

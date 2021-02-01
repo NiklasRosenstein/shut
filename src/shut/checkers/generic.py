@@ -19,9 +19,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from typing import Iterable, Optional, Union
+from typing import Iterable, Union
 
-from shut.model import AbstractProjectModel, Project
+from shut.model import AbstractProjectModel, MonorepoModel, PackageModel
 from .base import CheckResult, CheckStatus, Checker, SkipCheck, check, register_checker
 
 
@@ -29,7 +29,7 @@ class GenericChecker(Checker):
 
   @check('unknown-config-options')
   def _check_unknown_keys(self,
-    obj: Union['MonorepoModel', 'PackageModel'],
+    obj: Union[MonorepoModel, PackageModel],
   ) -> Iterable[CheckResult]:
     if obj.unknown_keys:
       yield CheckResult(CheckStatus.WARNING, ', '.join(map(str, obj.unknown_keys)))

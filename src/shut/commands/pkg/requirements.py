@@ -27,7 +27,7 @@ import sys
 from typing import Dict, List
 
 import click
-from nr.stream import concat
+from nr.stream import concat  # type: ignore
 from termcolor import colored
 
 from shut.commands import project

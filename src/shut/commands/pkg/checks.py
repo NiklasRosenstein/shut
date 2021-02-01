@@ -19,22 +19,17 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import enum
 import logging
-import os
 import sys
 import time
-from typing import Iterable, List, Union
+from typing import List
 
 import click
-import termcolor
-from nr.stream import Stream
-from termcolor import colored
 
-from shut.checkers import CheckStatus, Check, get_checks
+from shut.checkers import Check, get_checks
 from shut.commands import project
 from shut.commands.commons.checks import print_checks_all, get_checks_status
-from shut.model import PackageModel, Project
+from shut.model import PackageModel
 from . import pkg
 
 logger = logging.getLogger(__name__)

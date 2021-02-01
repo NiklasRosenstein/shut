@@ -23,11 +23,10 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, TextIO, Tuple, Type, TypeVar, Union
 
-import nr.fs
+import nr.fs  # type: ignore
 import yaml
 from databind.core import ConversionError, datamodel, field, Registry
 from databind.json import from_json, to_json, registry as json_registry
-from nr.stream import Stream
 
 registry = Registry(json_registry)
 registry.set_option(datamodel, 'skip_defaults', True)

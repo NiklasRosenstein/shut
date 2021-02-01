@@ -27,14 +27,13 @@ from collections import Counter
 from typing import Iterable, Generic, Optional, T, Type
 
 import click
-import nr.fs
+import nr.fs  # type: ignore
 from databind.core import datamodel
-from nr.stream import Stream
-from nr.utils.git import Git
+from nr.stream import Stream  # type: ignore
+from nr.utils.git import Git  # type: ignore
 from termcolor import colored
 
 from shut.changelog.manager import ChangelogManager
-from shut.changelog.v3 import Changelog
 from shut.commands import project
 from shut.model import AbstractProjectModel, Project
 from shut.model.version import bump_version, parse_version, Version
