@@ -36,4 +36,4 @@ def install(develop, extra, upgrade, quiet, pip, pip_args, dry):
   if pip_args:
     args += shlex.split(pip_args)
 
-  run_install(pip, args, develop, upgrade, quiet, dry)
+  run_install(pip, args, upgrade, quiet, dry)
