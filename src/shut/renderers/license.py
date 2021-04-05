@@ -28,9 +28,22 @@ from .core import Renderer, register_renderer
 from shut.model import AbstractProjectModel, PackageModel
 from shut.utils.io.virtual import VirtualFiles
 
+# https://spdx.org/licenses/
+LICENSE_TEMPLATE_MAP = {
+  'MIT.txt': ['MIT'],
+  'BSD2.txt': ['BSD-2-Clause', 'BSD-Simplified', 'BSD-2', 'BSD2'],
+  'BSD3.txt': ['BSD-3-Clause', 'BSD-new', 'BSD-3', 'BSD3'],
+  'BSD4.txt': ['BSD-4-Clause', 'BSD-old', 'BSD-Original'],
+  'Apache2.txt': ['Apache-2.0', 'Apache-2', 'Apache2']
+}
+
 
 def get_license_template(license_name: str) -> str:
-  return resource_string('shut', f'data/license_templates/{license_name}.txt').decode('utf-8')
+  for license_filename, license_identifiers in LICENSE_TEMPLATE_MAP.items():
+    for license_identifier in license_identifiers:
+      if license_name.lower() == license_identifier.lower():
+        return resource_string('shut', f'data/license_templates/{license_filename}').decode('utf-8')
+  raise RuntimeError('License template not available for supplied license name', license_name)
 
 
 def has_license_template(license_name: str) -> bool:
